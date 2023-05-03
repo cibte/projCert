@@ -1,0 +1,26 @@
+pipeline {
+    agent any
+    
+    stages {
+        stage('Build Docker image') {
+            steps {
+                script {
+                    def dockerImage = docker.build("<image_name>:<tag>")
+                    dockerImage.push()
+                }
+            }
+        }
+        stage('Deploy to Virtual Machine') {
+            steps {
+                script {
+                    sshagent(['<ssh_credentials>']) {
+                        sh "scp docker-compose.yaml <user>@<virtual_machine_ip>:~/"
+                        sh "scp .env <user>@<virtual_machine_ip>:~/"
+                        sh "scp docker-compose.service <user>@<virtual_machine_ip>:~/"
+                        sh "ssh <user>@<virtual_machine_ip> 'sudo systemctl daemon-reload && sudo systemctl enable docker-compose && sudo systemctl start docker-compose'"
+                    }
+                }
+            }
+        }
+    }
+}
